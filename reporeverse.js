@@ -259,20 +259,20 @@ async function interactiveMenu() {
 
     const choices = [
       {
-        name: `${clr(col.bred + col.bold,   '1')}  ${clr(col.white, 'Reset demo')}          ${clr(col.gray, '— break checkout → demo-ready')}`,
+        name: `  Reset to DEMO READY  (breaks checkout)`,
         value: 'break',
       },
       {
-        name: `${clr(col.bgreen + col.bold,  '2')}  ${clr(col.white, 'Fix checkout')}         ${clr(col.gray, '— restore working confirmation')}`,
+        name: `  Fix checkout         (restores confirmation)`,
         value: 'fix',
       },
       {
-        name: `${clr(col.bcyan + col.bold,   '3')}  ${clr(col.white, 'Check status')}         ${clr(col.gray, '— see current repo state')}`,
+        name: `  Check status`,
         value: 'status',
       },
-      new inquirer.Separator(clr(col.gray, '  ─────────────────────────────────────────')),
+      new inquirer.Separator(),
       {
-        name: `${clr(col.yellow + col.bold,  '0')}  ${clr(col.gray, 'Exit RepoReverse')}`,
+        name: `  Exit`,
         value: 'quit',
       },
     ];
