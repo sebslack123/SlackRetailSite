@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Löpning – NordformSport</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Nordform<span>Sport</span></a>
+      <nav class="nav-links">
+        <a href="running.html" class="active">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+        <a href="about.html">Om oss</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="cart.html" class="cart-icon" id="cart-link">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="cart-count" id="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-hero" style="background-image: url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1400&q=80')">
+    <div class="page-hero-content">
+      <h1>Löpning</h1>
+      <p>Skor, kläder och tillbehör för väg- och terränglöpning</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="filter-bar">
+        <span class="filter-count" id="filter-count">Visar 8 produkter</span>
+        <div class="filter-group">
+          <select id="sort-select" onchange="sortProducts()">
+            <option value="default">Sortera: Rekommenderade</option>
+            <option value="price-asc">Pris: Lägst först</option>
+            <option value="price-desc">Pris: Högst först</option>
+            <option value="name">Namn: A–Ö</option>
+          </select>
+        </div>
+      </div>
+      <div class="product-grid" id="product-grid"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo">Nordform<span>Sport</span></span>
+        <p>Vi levererar kvalitetsutrustning för svenska sportentusiaster sedan 2010.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Sport</h4>
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+      </div>
+      <div class="footer-links">
+        <h4>Kundservice</h4>
+        <a href="#">Frakt & retur</a>
+        <a href="#">Kontakta oss</a>
+        <a href="#">Vanliga frågor</a>
+      </div>
+      <div class="footer-links">
+        <h4>Företag</h4>
+        <a href="about.html">Om oss</a>
+        <a href="#">Press</a>
+        <a href="#">Karriär</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 NordformSport AB. Org.nr 556789-1234. Alla rättigheter förbehållna.</p>
+    </div>
+  </footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script>
+    let currentProducts = getProductsByCategory('running');
+    renderProductGrid('product-grid', currentProducts);
+
+    function sortProducts() {
+      const val = document.getElementById('sort-select').value;
+      let sorted = [...currentProducts];
+      if (val === 'price-asc') sorted.sort((a, b) => a.price - b.price);
+      else if (val === 'price-desc') sorted.sort((a, b) => b.price - a.price);
+      else if (val === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
+      renderProductGrid('product-grid', sorted);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nordform Sport – Löpning, Squash & Golf</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Nordform<span>Sport</span></a>
+      <nav class="nav-links">
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+        <a href="about.html">Om oss</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="cart.html" class="cart-icon" id="cart-link">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="cart-count" id="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <span class="hero-tag">Ny kollektion 2026</span>
+      <h1>Prestera på<br/>din nivå</h1>
+      <p>Sveriges ledande sportbutik för löpning, squash och golf. Utrustning och kläder för alla nivåer.</p>
+      <div class="hero-cta">
+        <a href="running.html" class="btn btn-primary">Shoppa nu</a>
+        <a href="about.html" class="btn btn-ghost">Om oss</a>
+      </div>
+    </div>
+    <div class="hero-image">
+      <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=700&q=80" alt="Löpare" />
+    </div>
+  </section>
+
+  <!-- CATEGORY CARDS -->
+  <section class="categories section">
+    <div class="container">
+      <h2 class="section-title">Utforska kategorier</h2>
+      <div class="cat-grid">
+        <a href="running.html" class="cat-card">
+          <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80" alt="Löpning" />
+          <div class="cat-label">
+            <span>Löpning</span>
+            <small>32 produkter</small>
+          </div>
+        </a>
+        <a href="squash.html" class="cat-card">
+          <img src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&q=80" alt="Squash" />
+          <div class="cat-label">
+            <span>Squash</span>
+            <small>18 produkter</small>
+          </div>
+        </a>
+        <a href="golf.html" class="cat-card">
+          <img src="https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=600&q=80" alt="Golf" />
+          <div class="cat-label">
+            <span>Golf</span>
+            <small>24 produkter</small>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED PRODUCTS -->
+  <section class="featured section bg-light">
+    <div class="container">
+      <h2 class="section-title">Bästsäljare</h2>
+      <div class="product-grid" id="featured-grid"></div>
+    </div>
+  </section>
+
+  <!-- BANNER -->
+  <section class="promo-banner">
+    <div class="container">
+      <div class="promo-inner">
+        <div>
+          <h3>Fri frakt över 499 kr</h3>
+          <p>Snabb leverans inom 1–3 vardagar i hela Sverige</p>
+        </div>
+        <div>
+          <h3>30 dagars retur</h3>
+          <p>Enkel och kostnadsfri returprocess</p>
+        </div>
+        <div>
+          <h3>Säker betalning</h3>
+          <p>Swish, kort och faktura via Klarna</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEWSLETTER -->
+  <section class="newsletter section">
+    <div class="container newsletter-inner">
+      <h2>Håll dig uppdaterad</h2>
+      <p>Prenumerera på vårt nyhetsbrev och få 10% rabatt på din första order.</p>
+      <form class="nl-form" onsubmit="subscribeNewsletter(event)">
+        <input type="email" placeholder="Din e-postadress" required />
+        <button type="submit" class="btn btn-primary">Prenumerera</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo">Nordform<span>Sport</span></span>
+        <p>Vi levererar kvalitetsutrustning för svenska sportentusiaster sedan 2010.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Sport</h4>
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+      </div>
+      <div class="footer-links">
+        <h4>Kundservice</h4>
+        <a href="#">Frakt & retur</a>
+        <a href="#">Kontakta oss</a>
+        <a href="#">Vanliga frågor</a>
+      </div>
+      <div class="footer-links">
+        <h4>Företag</h4>
+        <a href="about.html">Om oss</a>
+        <a href="#">Press</a>
+        <a href="#">Karriär</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 NordformSport AB. Org.nr 556789-1234. Alla rättigheter förbehållna.</p>
+    </div>
+  </footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script>
+    renderProductGrid('featured-grid', getFeaturedProducts());
+    function subscribeNewsletter(e) {
+      e.preventDefault();
+      alert('Tack! Du får snart ett välkomstmail med din rabattkod.');
+      e.target.reset();
+    }
+  </script>
+</body>
+</html>
