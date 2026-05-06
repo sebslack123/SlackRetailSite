@@ -115,9 +115,9 @@ function getStatusLine() {
   const dirty = isDirty();
 
   const stateStr = state === 'broken'
-    ? clr(col.bred + col.bold, '● BROKEN')
+    ? clr(col.bgreen + col.bold, '● DEMO READY')
     : state === 'working'
-    ? clr(col.bgreen + col.bold, '● WORKING')
+    ? clr(col.bcyan + col.bold,  '● FIXED')
     : clr(col.yellow, '● UNKNOWN');
 
   const dirtyStr = dirty
@@ -139,7 +139,7 @@ function printStatus() {
   console.log('');
 
   if (state === 'broken') {
-    console.log(`  ${clr(col.yellow, '!')} Checkout shows error — ${clr(col.bold + col.white, 'demo-ready')} for Claude Code`);
+    console.log(`  ${clr(col.bgreen, '✓')} Checkout is demo-ready — Claude Code will fix this live`);
   } else if (state === 'working') {
     console.log(`  ${clr(col.bgreen, '✓')} Checkout confirmation works — break it to start a demo`);
   }
