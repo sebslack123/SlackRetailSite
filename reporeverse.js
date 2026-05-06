@@ -243,11 +243,13 @@ function ensureWorking() {
 
 // ── Interactive menu ───────────────────────────────────────
 async function interactiveMenu() {
-  let inquirer;
+  let select, Separator;
   try {
-    inquirer = (await import('inquirer')).default;
+    const mod = await import('@inquirer/prompts');
+    select    = mod.select;
+    Separator = mod.Separator;
   } catch {
-    console.log(clr(col.bred, '\n  inquirer not found — run: npm install\n'));
+    console.log(clr(col.bred, '\n  @inquirer/prompts not found — run: npm install\n'));
     process.exit(1);
   }
 
@@ -257,36 +259,18 @@ async function interactiveMenu() {
 
     console.log(`  Current state: ${stateStr}\n`);
 
-    const choices = [
-      {
-        name: `  Reset to DEMO READY  (breaks checkout)`,
-        value: 'break',
-      },
-      {
-        name: `  Fix checkout         (restores confirmation)`,
-        value: 'fix',
-      },
-      {
-        name: `  Check status`,
-        value: 'status',
-      },
-      new inquirer.Separator(),
-      {
-        name: `  Exit`,
-        value: 'quit',
-      },
-    ];
-
-    const { action } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'action',
-        message: clr(col.bold + col.white, 'Main menu: pick what you want to do'),
-        choices,
-        loop: false,
-        pageSize: 10,
-      },
-    ]);
+    const action = await select({
+      message: 'Main menu: pick what you want to do',
+      choices: [
+        { name: '  1  Reset to DEMO READY  — breaks checkout for demo', value: 'break' },
+        { name: '  2  Fix checkout          — restores working confirmation', value: 'fix' },
+        { name: '  3  Check status          — see current repo state', value: 'status' },
+        new Separator(),
+        { name: '  0  Exit', value: 'quit' },
+      ],
+      loop: false,
+      pageSize: 8,
+    });
 
     if (action === 'quit') {
       console.log(clr(col.gray, '\n  Bye.\n'));
@@ -303,9 +287,8 @@ async function interactiveMenu() {
     }
 
     // Pause so user can read output before redrawing menu
-    await inquirer.prompt([
-      { type: 'input', name: '_', message: clr(col.gray, 'Press Enter to return to menu…') },
-    ]);
+    const { input } = await import('@inquirer/prompts');
+    await input({ message: clr(col.gray, 'Press Enter to return to menu…') });
   }
 }
 
