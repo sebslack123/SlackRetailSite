@@ -1,0 +1,18 @@
+{
+  "name": "reporeverse",
+  "version": "1.0.0",
+  "description": "Demo state manager for NordformSport — break/fix/reset the repo for Claude Code demos",
+  "type": "module",
+  "bin": {
+    "reporeverse": "./reporeverse.js"
+  },
+  "scripts": {
+    "status": "node reporeverse.js status",
+    "break":  "node reporeverse.js break",
+    "fix":    "node reporeverse.js fix",
+    "reset":  "node reporeverse.js reset"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
