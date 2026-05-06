@@ -1,192 +1,221 @@
 #!/usr/bin/env node
-// RepoReverse CLI — demo state manager for NordformSport
+// RepoReverse CLI — interactive demo state manager for NordformSport
 
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const WORKING_SHA = '8810abd';  // "Initial launch" — fully working site
-const BROKEN_SHA  = 'a4a96ca';  // "Break placeOrder" — shows error on checkout
+const require = createRequire(import.meta.url);
 
-// ── Tiny colour helpers (no deps) ─────────────────────────
-const c = {
-  reset: '\x1b[0m',
-  bold:  '\x1b[1m',
-  green: '\x1b[32m',
-  red:   '\x1b[31m',
-  yellow:'\x1b[33m',
-  cyan:  '\x1b[36m',
-  gray:  '\x1b[90m',
+const WORKING_SHA = '8810abd';
+const BROKEN_SHA  = 'a4a96ca';
+
+// ── Colours (no extra dep) ─────────────────────────────────
+const ESC = '\x1b[';
+const r   = s => `${ESC}0m${s}${ESC}0m`;
+const bold = s => `${ESC}1m${s}${ESC}0m`;
+
+// gradients: pink → yellow → green (like the screenshot)
+const LOGO_COLORS = [
+  '\x1b[38;2;255;100;200m',  // pink
+  '\x1b[38;2;255;150;100m',  // salmon
+  '\x1b[38;2;255;210;80m',   // yellow
+  '\x1b[38;2;160;230;80m',   // lime
+  '\x1b[38;2;80;220;180m',   // teal
+  '\x1b[38;2;100;180;255m',  // blue
+];
+
+const col = {
+  reset:  '\x1b[0m',
+  bold:   '\x1b[1m',
+  dim:    '\x1b[2m',
+  green:  '\x1b[32m',
+  bgreen: '\x1b[92m',
+  red:    '\x1b[31m',
+  bred:   '\x1b[91m',
+  yellow: '\x1b[33m',
+  cyan:   '\x1b[36m',
+  bcyan:  '\x1b[96m',
+  mag:    '\x1b[35m',
+  bmag:   '\x1b[95m',
+  gray:   '\x1b[90m',
+  white:  '\x1b[97m',
+  bgBlue: '\x1b[44m',
+  bgMag:  '\x1b[45m',
+  bgDark: '\x1b[48;2;20;20;40m',
 };
-const bold   = s => `${c.bold}${s}${c.reset}`;
-const green  = s => `${c.green}${s}${c.reset}`;
-const red    = s => `${c.red}${s}${c.reset}`;
-const yellow = s => `${c.yellow}${s}${c.reset}`;
-const cyan   = s => `${c.cyan}${s}${c.reset}`;
-const gray   = s => `${c.gray}${s}${c.reset}`;
+const clr = (c, s) => `${c}${s}${col.reset}`;
+
+// ── ASCII banner via figlet ───────────────────────────────
+function printBanner() {
+  let figlet;
+  try { figlet = require('figlet'); } catch { figlet = null; }
+
+  console.clear();
+
+  if (figlet) {
+    const text = figlet.textSync('RepoReverse', { font: 'Big', horizontalLayout: 'default' });
+    const lines = text.split('\n');
+    const totalColors = LOGO_COLORS.length;
+    lines.forEach((line, i) => {
+      const color = LOGO_COLORS[i % totalColors];
+      console.log(`  ${color}${line}${col.reset}`);
+    });
+  } else {
+    // Fallback block letters
+    const pink = '\x1b[38;2;255;100;200m';
+    const lime = '\x1b[38;2;160;230;80m';
+    console.log(`\n  ${pink}██████╗ ███████╗██████╗  ██████╗ ${lime}██████╗ ███████╗██╗   ██╗███████╗██████╗ ███████╗███████╗${col.reset}`);
+    console.log(`  ${pink}██╔══██╗██╔════╝██╔══██╗██╔═══██╗${lime}██╔══██╗██╔════╝██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝${col.reset}`);
+    console.log(`  ${pink}██████╔╝█████╗  ██████╔╝██║   ██║${lime}██████╔╝█████╗  ██║   ██║█████╗  ██████╔╝███████╗█████╗  ${col.reset}`);
+    console.log(`  ${pink}██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║${lime}██╔══██╗██╔══╝  ╚██╗ ██╔╝██╔══╝  ██╔══██╗╚════██║██╔══╝  ${col.reset}`);
+    console.log(`  ${pink}██║  ██║███████╗██║     ╚██████╔╝${lime}██║  ██║███████╗ ╚████╔╝ ███████╗██║  ██║███████║███████╗${col.reset}`);
+    console.log(`  ${pink}╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ${lime}╚═╝  ╚═╝╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝${col.reset}`);
+  }
+
+  console.log('');
+  console.log(
+    `  ${col.bgMag}${col.white}${col.bold} CONTROL CENTER ${col.reset}  ` +
+    clr(col.bold + col.white, 'AI Demo Repo Control Center')
+  );
+  console.log(`  ${clr(col.dim + col.white, 'Reset, fix, and manage your NordformSport demo — effortlessly.')}`);
+  console.log('');
+  console.log(clr(col.gray, '  Use ↑/↓ arrows to move, Enter to choose, Ctrl+C to exit.'));
+  console.log('');
+}
 
 // ── Git helpers ────────────────────────────────────────────
 function git(cmd, opts = {}) {
-  return execSync(`git -C "${__dir}" ${cmd}`, { encoding: 'utf8', stdio: opts.silent ? 'pipe' : ['pipe','pipe','pipe'] }).trim();
+  return execSync(`git -C "${__dir}" ${cmd}`, {
+    encoding: 'utf8',
+    stdio: 'pipe',
+  }).trim();
 }
 
-function currentSha() {
-  return git('rev-parse HEAD').substring(0, 7);
-}
-
-function isDirty() {
-  return git('status --porcelain') !== '';
-}
+function currentSha()  { return git('rev-parse HEAD').substring(0, 7); }
+function isDirty()     { return git('status --porcelain') !== ''; }
 
 function currentState() {
-  const sha = currentSha();
-  if (sha === BROKEN_SHA)  return 'broken';
-  if (sha === WORKING_SHA) return 'working';
-  // HEAD is neither base commit — check checkout.html content as fallback
   try {
     const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-    return src.includes("showError('Det gick inte") && !src.includes('const email = document') ? 'broken' : 'working';
+    if (src.includes("showError('Det gick inte") && !src.includes("const email = document.getElementById('email')")) {
+      return 'broken';
+    }
+    return 'working';
   } catch { return 'unknown'; }
 }
 
-// ── Commands ───────────────────────────────────────────────
-
-function cmdStatus() {
+// ── State display ──────────────────────────────────────────
+function getStatusLine() {
   const state = currentState();
   const sha   = currentSha();
   const dirty = isDirty();
 
+  const stateStr = state === 'broken'
+    ? clr(col.bred + col.bold, '● BROKEN')
+    : state === 'working'
+    ? clr(col.bgreen + col.bold, '● WORKING')
+    : clr(col.yellow, '● UNKNOWN');
+
+  const dirtyStr = dirty
+    ? clr(col.yellow, 'yes — uncommitted changes')
+    : clr(col.gray, 'clean');
+
+  return { state, sha, dirty, stateStr, dirtyStr };
+}
+
+function printStatus() {
+  const { state, sha, stateStr, dirtyStr } = getStatusLine();
+
   console.log('');
-  console.log(bold('  RepoReverse — NordformSport Demo'));
-  console.log(gray('  ─────────────────────────────────'));
-  console.log(`  Commit : ${gray(sha)}`);
-  console.log(`  State  : ${state === 'broken'  ? red('● broken')  :
-                            state === 'working' ? green('● working') :
-                                                  yellow('● unknown')}`);
-  console.log(`  Dirty  : ${dirty ? yellow('yes — uncommitted changes') : green('no')}`);
+  console.log(clr(col.bold + col.white, '  ┌─ Current Demo State ───────────────────────┐'));
+  console.log(`  │  State  :  ${stateStr.padEnd(28)}       │`);
+  console.log(`  │  Commit :  ${clr(col.gray, sha).padEnd(28)}       │`);
+  console.log(`  │  Dirty  :  ${dirtyStr.padEnd(28)}       │`);
+  console.log(clr(col.bold + col.white, '  └─────────────────────────────────────────────┘'));
   console.log('');
 
   if (state === 'broken') {
-    console.log(`  ${yellow('!')} Checkout button shows error — ${bold('demo-ready')} for Claude Code fix`);
+    console.log(`  ${clr(col.yellow, '!')} Checkout shows error — ${clr(col.bold + col.white, 'demo-ready')} for Claude Code`);
   } else if (state === 'working') {
-    console.log(`  ${green('✓')} Checkout button works — run ${cyan('reporeverse break')} to prep a demo`);
+    console.log(`  ${clr(col.bgreen, '✓')} Checkout confirmation works — break it to start a demo`);
   }
   console.log('');
 }
 
-function cmdBreak() {
-  console.log('');
+// ── Core operations ────────────────────────────────────────
+function doBreak() {
   if (isDirty()) {
-    console.log(red('  ✗ Uncommitted changes detected. Commit or stash them first.'));
-    console.log('');
-    process.exit(1);
+    console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
+    return false;
+  }
+  if (currentState() === 'broken') {
+    console.log(clr(col.yellow, '\n  Already broken — nothing to do.\n'));
+    return true;
   }
 
-  const state = currentState();
-  if (state === 'broken') {
-    console.log(yellow('  Already in broken state — nothing to do.'));
-    console.log('');
-    return;
-  }
-
-  console.log(cyan('  → Resetting to broken demo state…'));
+  process.stdout.write(clr(col.bcyan, '\n  → Resetting to broken demo state'));
   git(`checkout ${BROKEN_SHA} -- checkout.html`);
-  // If already on a commit that has both files identical, the checkout might
-  // have done nothing — do a quick content check and write if needed
   ensureBroken();
   git('add checkout.html');
+  try { git('commit -m "chore: reset to broken demo state [reporeverse]"'); }
+  catch { git('restore --staged checkout.html'); }
 
-  try {
-    git('commit -m "chore: reset to broken demo state [reporeverse]"');
-  } catch {
-    // nothing to commit means it was already broken at HEAD content level
-    git('reset HEAD checkout.html', { silent: true });
-  }
-
+  animateDots();
   git('push origin HEAD');
-  console.log(green('  ✓ Broken. Checkout now shows error.'));
-  console.log(`  ${gray('Claude Code can fix this in a new session.')}`);
-  console.log('');
+  console.log(clr(col.bgreen, '\n  ✓ Done! Checkout now shows error message.'));
+  console.log(clr(col.gray,   '  Claude Code can fix this in a new session.\n'));
+  return true;
 }
 
-function cmdFix() {
-  console.log('');
+function doFix() {
   if (isDirty()) {
-    console.log(red('  ✗ Uncommitted changes detected. Commit or stash them first.'));
-    console.log('');
-    process.exit(1);
+    console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
+    return false;
+  }
+  if (currentState() === 'working') {
+    console.log(clr(col.yellow, '\n  Already working — nothing to do.\n'));
+    return true;
   }
 
-  const state = currentState();
-  if (state === 'working') {
-    console.log(yellow('  Already in working state — nothing to do.'));
-    console.log('');
-    return;
-  }
-
-  console.log(cyan('  → Restoring working checkout…'));
+  process.stdout.write(clr(col.bcyan, '\n  → Restoring working checkout'));
   git(`checkout ${WORKING_SHA} -- checkout.html`);
   ensureWorking();
   git('add checkout.html');
+  try { git('commit -m "fix: restore placeOrder — checkout works again [reporeverse]"'); }
+  catch { git('restore --staged checkout.html'); }
 
-  try {
-    git('commit -m "fix: restore placeOrder — checkout works again [reporeverse]"');
-  } catch {
-    git('reset HEAD checkout.html', { silent: true });
-  }
-
+  animateDots();
   git('push origin HEAD');
-  console.log(green('  ✓ Fixed. Checkout confirmation is working.'));
-  console.log('');
+  console.log(clr(col.bgreen, '\n  ✓ Done! Checkout confirmation is fully working.\n'));
+  return true;
 }
 
-function cmdReset() {
-  // Alias for break — "reset to demo-ready broken state"
-  cmdBreak();
+function animateDots(n = 3) {
+  for (let i = 0; i < n; i++) {
+    process.stdout.write(clr(col.bcyan, '.'));
+    execSync('sleep 0.3');
+  }
 }
 
-function cmdHelp() {
-  console.log('');
-  console.log(bold('  RepoReverse') + gray(' — NordformSport demo state manager'));
-  console.log('');
-  console.log('  Usage: ' + cyan('node reporeverse.js <command>'));
-  console.log('');
-  console.log('  Commands:');
-  console.log(`    ${cyan('status')}   Show current demo state`);
-  console.log(`    ${cyan('break')}    Reset to broken state (error on checkout) — demo-ready`);
-  console.log(`    ${cyan('fix')}      Restore working state (confirmation on checkout)`);
-  console.log(`    ${cyan('reset')}    Alias for break`);
-  console.log(`    ${cyan('help')}     Show this message`);
-  console.log('');
-  console.log('  Demo workflow:');
-  console.log(gray('    1.  node reporeverse.js status   ← verify repo is ready'));
-  console.log(gray('    2.  node reporeverse.js break    ← introduce the bug'));
-  console.log(gray('    3.  Run your Claude Code demo    ← Claude fixes it live'));
-  console.log(gray('    4.  node reporeverse.js break    ← reset for next demo'));
-  console.log('');
-}
-
-// ── Content patchers (used when git checkout can't be used cleanly) ──
-
+// ── Content patchers ───────────────────────────────────────
 function ensureBroken() {
   const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-  if (!src.includes("showError('Det gick inte")) {
-    // Already handled by git checkout above — this is a safety net
-    const patched = src
-      .replace(
-        /function placeOrder\(\) \{[\s\S]*?^\s*\}/m,
-        `function placeOrder() {\n      showError('Det gick inte att genomföra köpet. Försök igen senare.');\n    }\n\n    function showError(msg) {\n      const el = document.getElementById('payment-error');\n      el.textContent = msg;\n      el.style.display = 'block';\n      el.scrollIntoView({ behavior: 'smooth', block: 'center' });\n    }`
-      );
-    writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
-  }
+  if (src.includes("showError('Det gick inte")) return;
+  const patched = src.replace(
+    /function placeOrder\(\) \{[\s\S]*?(?=\n\s{4}function clearCartAndGo)/,
+    `function placeOrder() {\n      showError('Det gick inte att genomföra köpet. Försök igen senare.');\n    }\n\n    function showError(msg) {\n      const el = document.getElementById('payment-error');\n      el.textContent = msg;\n      el.style.display = 'block';\n      el.scrollIntoView({ behavior: 'smooth', block: 'center' });\n    }\n\n    `
+  );
+  writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
 }
 
 function ensureWorking() {
   const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-  if (!src.includes("const email = document.getElementById('email')")) {
-    const working = `function placeOrder() {
+  if (src.includes("const email = document.getElementById('email')")) return;
+  const working = `function placeOrder() {
       const email = document.getElementById('email').value || 'din@email.se';
       const payment = document.querySelector('input[name="payment"]:checked').value;
       const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna faktura' };
@@ -205,26 +234,102 @@ function ensureWorking() {
       conf.style.display = 'flex';
       conf.scrollIntoView({ behavior: 'smooth' });
     }`;
+  const patched = src.replace(
+    /function placeOrder\(\) \{[\s\S]*?(?=\n\s{4}function clearCartAndGo)/,
+    working + '\n\n    '
+  );
+  writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
+}
 
-    const patched = src.replace(
-      /function placeOrder\(\) \{[\s\S]*?^\s*\}(\s*\n\s*function showError[\s\S]*?^\s*\})?/m,
-      working
-    );
-    writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
+// ── Interactive menu ───────────────────────────────────────
+async function interactiveMenu() {
+  let inquirer;
+  try {
+    inquirer = (await import('inquirer')).default;
+  } catch {
+    console.log(clr(col.bred, '\n  inquirer not found — run: npm install\n'));
+    process.exit(1);
+  }
+
+  while (true) {
+    printBanner();
+    const { state, stateStr } = getStatusLine();
+
+    console.log(`  Current state: ${stateStr}\n`);
+
+    const choices = [
+      {
+        name: `${clr(col.bred + col.bold,   '1')}  ${clr(col.white, 'Reset demo')}          ${clr(col.gray, '— break checkout → demo-ready')}`,
+        value: 'break',
+      },
+      {
+        name: `${clr(col.bgreen + col.bold,  '2')}  ${clr(col.white, 'Fix checkout')}         ${clr(col.gray, '— restore working confirmation')}`,
+        value: 'fix',
+      },
+      {
+        name: `${clr(col.bcyan + col.bold,   '3')}  ${clr(col.white, 'Check status')}         ${clr(col.gray, '— see current repo state')}`,
+        value: 'status',
+      },
+      new inquirer.Separator(clr(col.gray, '  ─────────────────────────────────────────')),
+      {
+        name: `${clr(col.yellow + col.bold,  '0')}  ${clr(col.gray, 'Exit RepoReverse')}`,
+        value: 'quit',
+      },
+    ];
+
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: clr(col.bold + col.white, 'Main menu: pick what you want to do'),
+        choices,
+        loop: false,
+        pageSize: 10,
+      },
+    ]);
+
+    if (action === 'quit') {
+      console.log(clr(col.gray, '\n  Bye.\n'));
+      process.exit(0);
+    }
+
+    if (action === 'status') {
+      printBanner();
+      printStatus();
+    } else if (action === 'break') {
+      doBreak();
+    } else if (action === 'fix') {
+      doFix();
+    }
+
+    // Pause so user can read output before redrawing menu
+    await inquirer.prompt([
+      { type: 'input', name: '_', message: clr(col.gray, 'Press Enter to return to menu…') },
+    ]);
   }
 }
 
-// ── Entry point ────────────────────────────────────────────
-const cmd = process.argv[2] || 'help';
+// ── Entry point: CLI flags or interactive ─────────────────
+const cmd = process.argv[2];
 
-switch (cmd) {
-  case 'status':          cmdStatus(); break;
-  case 'break':           cmdBreak();  break;
-  case 'fix':             cmdFix();    break;
-  case 'reset':           cmdReset();  break;
-  case 'help': case '--help': case '-h': cmdHelp(); break;
-  default:
-    console.log(red(`\n  Unknown command: ${cmd}`));
-    cmdHelp();
-    process.exit(1);
+if (!cmd) {
+  interactiveMenu();
+} else {
+  switch (cmd) {
+    case 'break':  case 'reset': doBreak();   break;
+    case 'fix':                  doFix();     break;
+    case 'status':               printBanner(); printStatus(); break;
+    case '--help': case '-h':
+      printBanner();
+      console.log('  Direct commands (skip the menu):');
+      console.log(`    ${clr(col.cyan, 'node reporeverse.js break')}   Reset to broken / demo-ready`);
+      console.log(`    ${clr(col.cyan, 'node reporeverse.js fix')}     Restore working checkout`);
+      console.log(`    ${clr(col.cyan, 'node reporeverse.js status')}  Show current state`);
+      console.log(`    ${clr(col.cyan, 'node reporeverse.js')}         Open interactive menu`);
+      console.log('');
+      break;
+    default:
+      console.log(clr(col.bred, `\n  Unknown command: ${cmd}`));
+      process.exit(1);
+  }
 }

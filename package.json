@@ -8,11 +8,15 @@
   },
   "scripts": {
     "status": "node reporeverse.js status",
-    "break":  "node reporeverse.js break",
-    "fix":    "node reporeverse.js fix",
-    "reset":  "node reporeverse.js reset"
+    "break": "node reporeverse.js break",
+    "fix": "node reporeverse.js fix",
+    "reset": "node reporeverse.js reset"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "figlet": "^1.11.0",
+    "inquirer": "^13.4.2"
   }
 }
