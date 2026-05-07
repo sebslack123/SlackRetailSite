@@ -156,10 +156,6 @@ function doBreak() {
     console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
     return false;
   }
-  if (currentState() === 'broken') {
-    console.log(clr(col.yellow, '\n  Already broken — nothing to do.\n'));
-    return true;
-  }
 
   process.stdout.write(clr(col.bcyan, '\n  → Resetting to broken demo state'));
   ensureBroken();
@@ -183,11 +179,6 @@ function doFix() {
     console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
     return false;
   }
-  if (currentState() === 'working') {
-    console.log(clr(col.yellow, '\n  Already working — nothing to do.\n'));
-    return true;
-  }
-
   process.stdout.write(clr(col.bcyan, '\n  → Restoring working checkout'));
   ensureWorking();
   git('add checkout.html');
