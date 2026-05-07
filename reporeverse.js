@@ -102,8 +102,8 @@ function isDirty()     { return git('status --porcelain') !== ''; }
 function currentState() {
   try {
     const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-    if (src.includes('__REPOREVERSE_BROKEN__')) return 'broken';
-    if (src.includes('__REPOREVERSE_WORKING__')) return 'working';
+    if (src.includes('Det gick inte att genomföra köpet')) return 'broken';
+    if (src.includes("display = 'flex'") && src.includes('order-confirmation')) return 'working';
     return 'unknown';
   } catch { return 'unknown'; }
 }
@@ -148,6 +148,10 @@ function printStatus() {
 
 // ── Core operations ────────────────────────────────────────
 function doBreak() {
+  process.stdout.write(clr(col.bcyan, '\n  → Syncing with remote'));
+  try { git('pull --rebase origin main'); } catch { /* already up to date or no remote */ }
+  process.stdout.write(clr(col.bcyan, ' ✓\n'));
+
   if (isDirty()) {
     console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
     return false;
@@ -171,6 +175,10 @@ function doBreak() {
 }
 
 function doFix() {
+  process.stdout.write(clr(col.bcyan, '\n  → Syncing with remote'));
+  try { git('pull --rebase origin main'); } catch { /* already up to date or no remote */ }
+  process.stdout.write(clr(col.bcyan, ' ✓\n'));
+
   if (isDirty()) {
     console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
     return false;
