@@ -13,38 +13,38 @@ const REPO = 'sebslack123/SlackRetailSite';
 const FILE = 'checkout.html';
 
 // ── Colours (no extra dep) ─────────────────────────────────
-const ESC = '\x1b[';
+const ESC = '[';
 const r   = s => `${ESC}0m${s}${ESC}0m`;
 const bold = s => `${ESC}1m${s}${ESC}0m`;
 
 // gradients: pink → yellow → green (like the screenshot)
 const LOGO_COLORS = [
-  '\x1b[38;2;255;100;200m',  // pink
-  '\x1b[38;2;255;150;100m',  // salmon
-  '\x1b[38;2;255;210;80m',   // yellow
-  '\x1b[38;2;160;230;80m',   // lime
-  '\x1b[38;2;80;220;180m',   // teal
-  '\x1b[38;2;100;180;255m',  // blue
+  '[38;2;255;100;200m',  // pink
+  '[38;2;255;150;100m',  // salmon
+  '[38;2;255;210;80m',   // yellow
+  '[38;2;160;230;80m',   // lime
+  '[38;2;80;220;180m',   // teal
+  '[38;2;100;180;255m',  // blue
 ];
 
 const col = {
-  reset:  '\x1b[0m',
-  bold:   '\x1b[1m',
-  dim:    '\x1b[2m',
-  green:  '\x1b[32m',
-  bgreen: '\x1b[92m',
-  red:    '\x1b[31m',
-  bred:   '\x1b[91m',
-  yellow: '\x1b[33m',
-  cyan:   '\x1b[36m',
-  bcyan:  '\x1b[96m',
-  mag:    '\x1b[35m',
-  bmag:   '\x1b[95m',
-  gray:   '\x1b[90m',
-  white:  '\x1b[97m',
-  bgBlue: '\x1b[44m',
-  bgMag:  '\x1b[45m',
-  bgDark: '\x1b[48;2;20;20;40m',
+  reset:  '[0m',
+  bold:   '[1m',
+  dim:    '[2m',
+  green:  '[32m',
+  bgreen: '[92m',
+  red:    '[31m',
+  bred:   '[91m',
+  yellow: '[33m',
+  cyan:   '[36m',
+  bcyan:  '[96m',
+  mag:    '[35m',
+  bmag:   '[95m',
+  gray:   '[90m',
+  white:  '[97m',
+  bgBlue: '[44m',
+  bgMag:  '[45m',
+  bgDark: '[48;2;20;20;40m',
 };
 const clr = (c, s) => `${c}${s}${col.reset}`;
 
@@ -57,7 +57,8 @@ function printBanner() {
 
   if (figlet) {
     const text = figlet.textSync('RepoReverse', { font: 'Big', horizontalLayout: 'default' });
-    const lines = text.split('\n');
+    const lines = text.split('
+');
     const totalColors = LOGO_COLORS.length;
     lines.forEach((line, i) => {
       const color = LOGO_COLORS[i % totalColors];
@@ -65,9 +66,10 @@ function printBanner() {
     });
   } else {
     // Fallback block letters
-    const pink = '\x1b[38;2;255;100;200m';
-    const lime = '\x1b[38;2;160;230;80m';
-    console.log(`\n  ${pink}██████╗ ███████╗██████╗  ██████╗ ${lime}██████╗ ███████╗██╗   ██╗███████╗██████╗ ███████╗███████╗${col.reset}`);
+    const pink = '[38;2;255;100;200m';
+    const lime = '[38;2;160;230;80m';
+    console.log(`
+  ${pink}██████╗ ███████╗██████╗  ██████╗ ${lime}██████╗ ███████╗██╗   ██╗███████╗██████╗ ███████╗███████╗${col.reset}`);
     console.log(`  ${pink}██╔══██╗██╔════╝██╔══██╗██╔═══██╗${lime}██╔══██╗██╔════╝██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝${col.reset}`);
     console.log(`  ${pink}██████╔╝█████╗  ██████╔╝██║   ██║${lime}██████╔╝█████╗  ██║   ██║█████╗  ██████╔╝███████╗█████╗  ${col.reset}`);
     console.log(`  ${pink}██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║${lime}██╔══██╗██╔══╝  ╚██╗ ██╔╝██╔══╝  ██╔══██╗╚════██║██╔══╝  ${col.reset}`);
@@ -146,30 +148,40 @@ function printStatus() {
 // ── Core operations ────────────────────────────────────────
 function doBreak() {
   try {
-    process.stdout.write(clr(col.bcyan, '\n  → Reading live state from GitHub...'));
+    process.stdout.write(clr(col.bcyan, '
+  → Reading live state from GitHub...'));
     const { sha } = getFileInfo();
     process.stdout.write(clr(col.bcyan, ' pushing broken state...'));
     putFile(CHECKOUT_BROKEN, sha, 'chore: reset to broken demo state [reporeverse]');
-    console.log(clr(col.bgreen, '\n  ✓ Done! Checkout now shows error message.'));
-    console.log(clr(col.gray,   '  GitHub Pages will update in ~30 seconds.\n'));
+    console.log(clr(col.bgreen, '
+  ✓ Done! Checkout now shows error message.'));
+    console.log(clr(col.gray,   '  GitHub Pages will update in ~30 seconds.
+'));
     return true;
   } catch (e) {
-    console.log(clr(col.bred, '\n  ✗ Failed: ' + e.message + '\n'));
+    console.log(clr(col.bred, '
+  ✗ Failed: ' + e.message + '
+'));
     return false;
   }
 }
 
 function doFix() {
   try {
-    process.stdout.write(clr(col.bcyan, '\n  → Reading live state from GitHub...'));
+    process.stdout.write(clr(col.bcyan, '
+  → Reading live state from GitHub...'));
     const { sha } = getFileInfo();
     process.stdout.write(clr(col.bcyan, ' pushing working state...'));
     putFile(CHECKOUT_WORKING, sha, 'fix: restore placeOrder — checkout works again [reporeverse]');
-    console.log(clr(col.bgreen, '\n  ✓ Done! Checkout confirmation is fully working.'));
-    console.log(clr(col.gray,   '  GitHub Pages will update in ~30 seconds.\n'));
+    console.log(clr(col.bgreen, '
+  ✓ Done! Checkout confirmation is fully working.'));
+    console.log(clr(col.gray,   '  GitHub Pages will update in ~30 seconds.
+'));
     return true;
   } catch (e) {
-    console.log(clr(col.bred, '\n  ✗ Failed: ' + e.message + '\n'));
+    console.log(clr(col.bred, '
+  ✗ Failed: ' + e.message + '
+'));
     return false;
   }
 }
@@ -400,10 +412,10 @@ const CHECKOUT_WORKING = `<!DOCTYPE html>
     });
 
     function formatCard(el) {
-      el.value = el.value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim().substring(0, 19);
+      el.value = el.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().substring(0, 19);
     }
     function formatExpiry(el) {
-      let v = el.value.replace(/\\D/g, '');
+      let v = el.value.replace(/\D/g, '');
       if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
       el.value = v;
     }
@@ -660,10 +672,10 @@ const CHECKOUT_BROKEN = `<!DOCTYPE html>
     });
 
     function formatCard(el) {
-      el.value = el.value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim().substring(0, 19);
+      el.value = el.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().substring(0, 19);
     }
     function formatExpiry(el) {
-      let v = el.value.replace(/\\D/g, '');
+      let v = el.value.replace(/\D/g, '');
       if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
       el.value = v;
     }
@@ -693,15 +705,20 @@ async function interactiveMenu() {
     select    = mod.select;
     Separator = mod.Separator;
   } catch {
-    console.log(clr(col.bred, '\n  @inquirer/prompts not found — run: npm install\n'));
+    console.log(clr(col.bred, '
+  @inquirer/prompts not found — run: npm install
+'));
     process.exit(1);
   }
 
   while (true) {
     printBanner();
+    process.stdout.write(clr(col.gray, '  Checking GitHub... '));
     const { state, stateStr } = getStatusLine();
+    process.stdout.write('' + ' '.repeat(30) + '');
 
-    console.log(`  Current state: ${stateStr}\n`);
+    console.log(`  Current state: ${stateStr}
+`);
 
     const action = await select({
       message: 'Main menu: pick what you want to do',
@@ -717,7 +734,9 @@ async function interactiveMenu() {
     });
 
     if (action === 'quit') {
-      console.log(clr(col.gray, '\n  Bye.\n'));
+      console.log(clr(col.gray, '
+  Bye.
+'));
       process.exit(0);
     }
 
@@ -730,9 +749,8 @@ async function interactiveMenu() {
       doFix();
     }
 
-    // Pause so user can read output before redrawing menu
-    const { input } = await import('@inquirer/prompts');
-    await input({ message: clr(col.gray, 'Press Enter to return to menu…') });
+    // Brief pause so user can read output, then auto-refresh menu with live state
+    await new Promise(r => setTimeout(r, 2000));
   }
 }
 
@@ -756,7 +774,8 @@ if (!cmd) {
       console.log('');
       break;
     default:
-      console.log(clr(col.bred, `\n  Unknown command: ${cmd}`));
+      console.log(clr(col.bred, `
+  Unknown command: ${cmd}`));
       process.exit(1);
   }
 }
