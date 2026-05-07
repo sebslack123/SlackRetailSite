@@ -203,50 +203,25 @@ function animateDots(n = 3) {
 }
 
 // ── Content patchers ───────────────────────────────────────
-const BROKEN_BLOCK = `    // BUG: placeOrder is broken — replace this entire function with the working implementation
-    // WORKING IMPLEMENTATION:
-    // function placeOrder() {
-    //   const email = document.getElementById('email').value || 'din@email.se';
-    //   const payment = document.querySelector('input[name="payment"]:checked').value;
-    //   const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna faktura' };
-    //   const orderNum = '#NF-' + Math.floor(100000 + Math.random() * 900000);
-    //   const deliveryDate = new Date(Date.now() + 3 * 86400000).toLocaleDateString('sv-SE', { weekday: 'long', month: 'long', day: 'numeric' });
-    //   const total = getCartTotal();
-    //   document.getElementById('order-number').textContent = orderNum;
-    //   document.getElementById('delivery-date').textContent = deliveryDate;
-    //   document.getElementById('payment-method-display').textContent = paymentLabels[payment];
-    //   document.getElementById('conf-total').textContent = formatPrice(total);
-    //   document.getElementById('conf-email-addr').textContent = email;
-    //   document.getElementById('checkout-section').style.display = 'none';
-    //   const conf = document.getElementById('order-confirmation');
-    //   conf.style.display = 'flex';
-    //   conf.scrollIntoView({ behavior: 'smooth' });
-    // }
+// Uses stable HTML markers <!-- PLACE_ORDER_START --> / <!-- PLACE_ORDER_END -->
+// so patching is a simple string replace with no fragile regexes.
+
+const PLACE_ORDER_MARKER_START = '    <!-- PLACE_ORDER_START -->';
+const PLACE_ORDER_MARKER_END   = '    <!-- PLACE_ORDER_END -->';
+
+const BROKEN_PLACE_ORDER = `    <!-- PLACE_ORDER_START -->
+    <!-- FIXME: placeOrder is broken. Fix it so clicking "Genomför köp" hides
+         #checkout-section and shows #order-confirmation with display='flex'.
+         Use getCartTotal() for the total, formatPrice() to format it. -->
     function placeOrder() {
-      showError('Det gick inte att genomföra köpet. Försök igen senare.');
-    }
-
-    function showError(msg) {
       const el = document.getElementById('payment-error');
-      el.textContent = msg;
+      el.textContent = 'Det gick inte att genomföra köpet. Försök igen senare.';
       el.style.display = 'block';
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }`;
+    }
+    <!-- PLACE_ORDER_END -->`;
 
-function ensureBroken() {
-  const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-  if (src.includes("showError('Det gick inte")) return;
-  const patched = src.replace(
-    /\s*\/\/ BUG:[\s\S]*?function showError[\s\S]*?\n\s*\}|function placeOrder\(\) \{[\s\S]*?(?=\n\s{4}function clearCartAndGo)/,
-    '\n' + BROKEN_BLOCK + '\n\n    '
-  );
-  writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
-}
-
-function ensureWorking() {
-  const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-  if (src.includes("const email = document.getElementById('email')")) return;
-  const working = `function placeOrder() {
+const WORKING_PLACE_ORDER = `    <!-- PLACE_ORDER_START -->
+    function placeOrder() {
       const email = document.getElementById('email').value || 'din@email.se';
       const payment = document.querySelector('input[name="payment"]:checked').value;
       const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna faktura' };
@@ -264,12 +239,27 @@ function ensureWorking() {
       const conf = document.getElementById('order-confirmation');
       conf.style.display = 'flex';
       conf.scrollIntoView({ behavior: 'smooth' });
-    }`;
-  const patched = src.replace(
-    /function placeOrder\(\) \{[\s\S]*?(?=\n\s{4}function clearCartAndGo)/,
-    working + '\n\n    '
-  );
-  writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
+    }
+    <!-- PLACE_ORDER_END -->`;
+
+function replaceMarkerBlock(src, replacement) {
+  const start = src.indexOf(PLACE_ORDER_MARKER_START);
+  const end   = src.indexOf(PLACE_ORDER_MARKER_END) + PLACE_ORDER_MARKER_END.length;
+  if (start === -1 || end < PLACE_ORDER_MARKER_END.length) {
+    console.error('  ✗ Marker not found in checkout.html — cannot patch safely.');
+    process.exit(1);
+  }
+  return src.slice(0, start) + replacement + src.slice(end);
+}
+
+function ensureBroken() {
+  const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
+  writeFileSync(join(__dir, 'checkout.html'), replaceMarkerBlock(src, BROKEN_PLACE_ORDER), 'utf8');
+}
+
+function ensureWorking() {
+  const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
+  writeFileSync(join(__dir, 'checkout.html'), replaceMarkerBlock(src, WORKING_PLACE_ORDER), 'utf8');
 }
 
 // ── Interactive menu ───────────────────────────────────────
