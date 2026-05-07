@@ -2,17 +2,15 @@
 // RepoReverse CLI — interactive demo state manager for NordformSport
 
 import { execSync } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-// SHA refs kept for reference only — no longer used for checkout patching
-const WORKING_SHA = '8810abd';
-const BROKEN_SHA  = 'a4a96ca';
+const REPO = 'sebslack123/SlackRetailSite';
+const FILE = 'checkout.html';
 
 // ── Colours (no extra dep) ─────────────────────────────────
 const ESC = '\x1b[';
@@ -88,22 +86,28 @@ function printBanner() {
   console.log('');
 }
 
-// ── Git helpers ────────────────────────────────────────────
-function git(cmd, opts = {}) {
-  return execSync(`git -C "${__dir}" ${cmd}`, {
-    encoding: 'utf8',
-    stdio: 'pipe',
-  }).trim();
+// ── GitHub API helpers ─────────────────────────────────────
+function gh(args) {
+  return execSync(`gh api ${args}`, { encoding: 'utf8', stdio: 'pipe' }).trim();
 }
 
-function currentSha()  { return git('rev-parse HEAD').substring(0, 7); }
-function isDirty()     { return git('status --porcelain') !== ''; }
+function getFileInfo() {
+  const raw = gh(`repos/${REPO}/contents/${FILE}`);
+  const json = JSON.parse(raw);
+  const content = Buffer.from(json.content, 'base64').toString('utf8');
+  return { sha: json.sha, content };
+}
+
+function putFile(content, sha, message) {
+  const b64 = Buffer.from(content).toString('base64');
+  gh(`repos/${REPO}/contents/${FILE} --method PUT -f message="${message}" -f content="${b64}" -f sha="${sha}"`);
+}
 
 function currentState() {
   try {
-    const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-    if (src.includes('Det gick inte att genomföra köpet')) return 'broken';
-    if (src.includes("display = 'flex'") && src.includes('order-confirmation')) return 'working';
+    const { content } = getFileInfo();
+    if (content.includes('Det gick inte att genomföra köpet')) return 'broken';
+    if (content.includes("display = 'flex'") && content.includes('order-confirmation')) return 'working';
     return 'unknown';
   } catch { return 'unknown'; }
 }
@@ -111,8 +115,6 @@ function currentState() {
 // ── State display ──────────────────────────────────────────
 function getStatusLine() {
   const state = currentState();
-  const sha   = currentSha();
-  const dirty = isDirty();
 
   const stateStr = state === 'broken'
     ? clr(col.bgreen + col.bold, '● DEMO READY')
@@ -120,21 +122,16 @@ function getStatusLine() {
     ? clr(col.bcyan + col.bold,  '● FIXED')
     : clr(col.yellow, '● UNKNOWN');
 
-  const dirtyStr = dirty
-    ? clr(col.yellow, 'yes — uncommitted changes')
-    : clr(col.gray, 'clean');
-
-  return { state, sha, dirty, stateStr, dirtyStr };
+  return { state, stateStr };
 }
 
 function printStatus() {
-  const { state, sha, stateStr, dirtyStr } = getStatusLine();
+  const { state, stateStr } = getStatusLine();
 
   console.log('');
   console.log(clr(col.bold + col.white, '  ┌─ Current Demo State ───────────────────────┐'));
-  console.log(`  │  State  :  ${stateStr.padEnd(28)}       │`);
-  console.log(`  │  Commit :  ${clr(col.gray, sha).padEnd(28)}       │`);
-  console.log(`  │  Dirty  :  ${dirtyStr.padEnd(28)}       │`);
+  console.log(`  │  Source :  ${clr(col.gray, 'github.com/' + REPO).padEnd(40)}  │`);
+  console.log(`  │  State  :  ${stateStr.padEnd(40)}  │`);
   console.log(clr(col.bold + col.white, '  └─────────────────────────────────────────────┘'));
   console.log('');
 
@@ -148,53 +145,32 @@ function printStatus() {
 
 // ── Core operations ────────────────────────────────────────
 function doBreak() {
-  process.stdout.write(clr(col.bcyan, '\n  → Syncing with remote'));
-  try { git('pull --rebase origin main'); } catch { /* already up to date or no remote */ }
-  process.stdout.write(clr(col.bcyan, ' ✓\n'));
-
-  if (isDirty()) {
-    console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
+  try {
+    process.stdout.write(clr(col.bcyan, '\n  → Reading live state from GitHub...'));
+    const { sha } = getFileInfo();
+    process.stdout.write(clr(col.bcyan, ' pushing broken state...'));
+    putFile(CHECKOUT_BROKEN, sha, 'chore: reset to broken demo state [reporeverse]');
+    console.log(clr(col.bgreen, '\n  ✓ Done! Checkout now shows error message.'));
+    console.log(clr(col.gray,   '  GitHub Pages will update in ~30 seconds.\n'));
+    return true;
+  } catch (e) {
+    console.log(clr(col.bred, '\n  ✗ Failed: ' + e.message + '\n'));
     return false;
   }
-
-  process.stdout.write(clr(col.bcyan, '\n  → Resetting to broken demo state'));
-  ensureBroken();
-  git('add checkout.html');
-  try { git('commit -m "chore: reset to broken demo state [reporeverse]"'); }
-  catch { git('restore --staged checkout.html'); }
-
-  animateDots();
-  git('push origin HEAD');
-  console.log(clr(col.bgreen, '\n  ✓ Done! Checkout now shows error message.'));
-  console.log(clr(col.gray,   '  Claude Code can fix this in a new session.\n'));
-  return true;
 }
 
 function doFix() {
-  process.stdout.write(clr(col.bcyan, '\n  → Syncing with remote'));
-  try { git('pull --rebase origin main'); } catch { /* already up to date or no remote */ }
-  process.stdout.write(clr(col.bcyan, ' ✓\n'));
-
-  if (isDirty()) {
-    console.log(clr(col.bred, '\n  ✗ Uncommitted changes detected. Commit or stash first.\n'));
+  try {
+    process.stdout.write(clr(col.bcyan, '\n  → Reading live state from GitHub...'));
+    const { sha } = getFileInfo();
+    process.stdout.write(clr(col.bcyan, ' pushing working state...'));
+    putFile(CHECKOUT_WORKING, sha, 'fix: restore placeOrder — checkout works again [reporeverse]');
+    console.log(clr(col.bgreen, '\n  ✓ Done! Checkout confirmation is fully working.'));
+    console.log(clr(col.gray,   '  GitHub Pages will update in ~30 seconds.\n'));
+    return true;
+  } catch (e) {
+    console.log(clr(col.bred, '\n  ✗ Failed: ' + e.message + '\n'));
     return false;
-  }
-  process.stdout.write(clr(col.bcyan, '\n  → Restoring working checkout'));
-  ensureWorking();
-  git('add checkout.html');
-  try { git('commit -m "fix: restore placeOrder — checkout works again [reporeverse]"'); }
-  catch { git('restore --staged checkout.html'); }
-
-  animateDots();
-  git('push origin HEAD');
-  console.log(clr(col.bgreen, '\n  ✓ Done! Checkout confirmation is fully working.\n'));
-  return true;
-}
-
-function animateDots(n = 3) {
-  for (let i = 0; i < n; i++) {
-    process.stdout.write(clr(col.bcyan, '.'));
-    execSync('sleep 0.3');
   }
 }
 
@@ -707,13 +683,7 @@ const CHECKOUT_BROKEN = `<!DOCTYPE html>
 </body>
 </html>`;
 
-function ensureBroken() {
-  writeFileSync(join(__dir, 'checkout.html'), CHECKOUT_BROKEN, 'utf8');
-}
-
-function ensureWorking() {
-  writeFileSync(join(__dir, 'checkout.html'), CHECKOUT_WORKING, 'utf8');
-}
+// ensureBroken/ensureWorking are handled inline in doBreak/doFix via GitHub API
 
 // ── Interactive menu ───────────────────────────────────────
 async function interactiveMenu() {
