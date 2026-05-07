@@ -10,6 +10,7 @@ import { createRequire } from 'module';
 const __dir = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
+// SHA refs kept for reference only — no longer used for checkout patching
 const WORKING_SHA = '8810abd';
 const BROKEN_SHA  = 'a4a96ca';
 
@@ -101,12 +102,8 @@ function isDirty()     { return git('status --porcelain') !== ''; }
 function currentState() {
   try {
     const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-    // Broken = placeOrder body only shows an error, never shows the modal
-    const hasFlex = src.includes("display = 'flex'") || src.includes('display="flex"') || src.includes("display: 'flex'");
-    const hasError = src.includes('payment-error') && src.includes('style.display') && !hasFlex;
-    if (hasError || src.includes('FIXME: placeOrder')) return 'broken';
-    // Working = placeOrder shows the #order-confirmation modal
-    if (hasFlex && src.includes('order-confirmation')) return 'working';
+    if (src.includes('__REPOREVERSE_BROKEN__')) return 'broken';
+    if (src.includes('__REPOREVERSE_WORKING__')) return 'working';
     return 'unknown';
   } catch { return 'unknown'; }
 }
@@ -202,25 +199,240 @@ function animateDots(n = 3) {
   }
 }
 
-// ── Content patchers ───────────────────────────────────────
-// Uses stable HTML markers <!-- PLACE_ORDER_START --> / <!-- PLACE_ORDER_END -->
-// so patching is a simple string replace with no fragile regexes.
+// ── Full-file checkout snapshots ──────────────────────────
+// reporeverse owns these completely. Claude Code can do whatever it wants
+// to checkout.html — break/fix always writes the exact known-good bytes.
 
-const PLACE_ORDER_MARKER_START = '    <!-- PLACE_ORDER_START -->';
-const PLACE_ORDER_MARKER_END   = '    <!-- PLACE_ORDER_END -->';
+const CHECKOUT_WORKING = `<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kassa – NordformSport</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Nordform<span>Sport</span></a>
+      <nav class="nav-links">
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+        <a href="about.html">Om oss</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="cart.html" class="cart-icon" id="cart-link">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="cart-count" id="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
 
-const BROKEN_PLACE_ORDER = `    <!-- PLACE_ORDER_START -->
-    <!-- FIXME: placeOrder is broken. Fix it so clicking "Genomför köp" hides
-         #checkout-section and shows #order-confirmation with display='flex'.
-         Use getCartTotal() for the total, formatPrice() to format it. -->
-    function placeOrder() {
-      const el = document.getElementById('payment-error');
-      el.textContent = 'Det gick inte att genomföra köpet. Försök igen senare.';
-      el.style.display = 'block';
+  <!-- CONFIRMATION OVERLAY -->
+  <div class="order-confirmation" id="order-confirmation" style="display:none;">
+    <div class="confirmation-card">
+      <div class="confirmation-icon">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h2>Beställning bekräftad!</h2>
+      <p class="conf-sub">Betalning mottagen. Tack för ditt köp hos NordformSport.</p>
+      <div class="conf-detail">
+        <div><span>Ordernummer</span><strong id="order-number">#NF-000000</strong></div>
+        <div><span>Beräknad leverans</span><strong id="delivery-date">–</strong></div>
+        <div><span>Betalningsmetod</span><strong id="payment-method-display">–</strong></div>
+        <div><span>Totalt betalt</span><strong id="conf-total">–</strong></div>
+      </div>
+      <p class="conf-email">En orderbekräftelse har skickats till <strong id="conf-email-addr">din e-post</strong>.</p>
+      <a href="index.html" class="btn btn-primary" onclick="clearCartAndGo(event)">Fortsätt handla</a>
+    </div>
+  </div>
+
+  <!-- CHECKOUT FORM -->
+  <section class="section" id="checkout-section">
+    <div class="container">
+      <h1 class="page-title">Kassa</h1>
+
+      <div class="checkout-layout">
+
+        <!-- LEFT: Form -->
+        <div class="checkout-form-col">
+
+          <div class="checkout-block">
+            <h3>Kontaktuppgifter</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Förnamn</label>
+                <input type="text" id="fname" placeholder="Erik" />
+              </div>
+              <div class="form-group">
+                <label>Efternamn</label>
+                <input type="text" id="lname" placeholder="Svensson" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>E-postadress</label>
+              <input type="email" id="email" placeholder="erik@exempel.se" />
+            </div>
+            <div class="form-group">
+              <label>Telefon</label>
+              <input type="tel" id="phone" placeholder="070-123 45 67" />
+            </div>
+          </div>
+
+          <div class="checkout-block">
+            <h3>Leveransadress</h3>
+            <div class="form-group">
+              <label>Gatuadress</label>
+              <input type="text" id="address" placeholder="Storgatan 12" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Postnummer</label>
+                <input type="text" id="zip" placeholder="114 36" />
+              </div>
+              <div class="form-group">
+                <label>Stad</label>
+                <input type="text" id="city" placeholder="Stockholm" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Land</label>
+              <select id="country">
+                <option value="SE">Sverige</option>
+                <option value="NO">Norge</option>
+                <option value="DK">Danmark</option>
+                <option value="FI">Finland</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="checkout-block">
+            <h3>Betalningsmetod</h3>
+            <div class="payment-options">
+              <label class="payment-option">
+                <input type="radio" name="payment" value="card" checked />
+                <div class="payment-label">
+                  <span>Betalkort</span>
+                  <div class="card-icons">
+                    <span class="card-badge">VISA</span>
+                    <span class="card-badge">MC</span>
+                  </div>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="swish" />
+                <div class="payment-label">
+                  <span>Swish</span>
+                  <span class="swish-badge">Swish</span>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="klarna" />
+                <div class="payment-label">
+                  <span>Faktura – Klarna</span>
+                  <span class="klarna-badge">K</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="card-fields" id="card-fields">
+              <div class="form-group">
+                <label>Kortnummer</label>
+                <input type="text" placeholder="1234 5678 9012 3456" maxlength="19" id="card-number" oninput="formatCard(this)" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Giltig till</label>
+                  <input type="text" placeholder="MM/ÅÅ" maxlength="5" id="card-expiry" oninput="formatExpiry(this)" />
+                </div>
+                <div class="form-group">
+                  <label>CVC</label>
+                  <input type="text" placeholder="123" maxlength="3" id="card-cvc" />
+                </div>
+              </div>
+            </div>
+
+            <div class="swish-fields" id="swish-fields" style="display:none;">
+              <div class="form-group">
+                <label>Mobilnummer för Swish</label>
+                <input type="tel" placeholder="070-123 45 67" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Order summary -->
+        <div class="checkout-summary-col">
+          <div class="checkout-block summary-block">
+            <h3>Din beställning</h3>
+            <div id="checkout-items"></div>
+            <div class="summary-totals" id="summary-totals"></div>
+            <button class="btn btn-primary btn-full" onclick="placeOrder()">Genomför köp</button>
+            <p class="secure-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Säker betalning med 256-bit SSL-kryptering
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo">Nordform<span>Sport</span></span>
+        <p>Vi levererar kvalitetsutrustning för svenska sportentusiaster sedan 2010.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Sport</h4>
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+      </div>
+      <div class="footer-links">
+        <h4>Kundservice</h4>
+        <a href="#">Frakt &amp; retur</a>
+        <a href="#">Kontakta oss</a>
+        <a href="#">Vanliga frågor</a>
+      </div>
+      <div class="footer-links">
+        <h4>Företag</h4>
+        <a href="about.html">Om oss</a>
+        <a href="#">Press</a>
+        <a href="#">Karriär</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 NordformSport AB. Org.nr 556789-1234. Alla rättigheter förbehållna.</p>
+    </div>
+  </footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script>
+    // __REPOREVERSE_WORKING__
+    document.querySelectorAll('input[name="payment"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.getElementById('card-fields').style.display = radio.value === 'card' ? 'block' : 'none';
+        document.getElementById('swish-fields').style.display = radio.value === 'swish' ? 'block' : 'none';
+      });
+    });
+
+    function formatCard(el) {
+      el.value = el.value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim().substring(0, 19);
     }
-    <!-- PLACE_ORDER_END -->`;
+    function formatExpiry(el) {
+      let v = el.value.replace(/\\D/g, '');
+      if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+      el.value = v;
+    }
 
-const WORKING_PLACE_ORDER = `    <!-- PLACE_ORDER_START -->
     function placeOrder() {
       const email = document.getElementById('email').value || 'din@email.se';
       const payment = document.querySelector('input[name="payment"]:checked').value;
@@ -240,26 +452,268 @@ const WORKING_PLACE_ORDER = `    <!-- PLACE_ORDER_START -->
       conf.style.display = 'flex';
       conf.scrollIntoView({ behavior: 'smooth' });
     }
-    <!-- PLACE_ORDER_END -->`;
 
-function replaceMarkerBlock(src, replacement) {
-  const start = src.indexOf(PLACE_ORDER_MARKER_START);
-  const end   = src.indexOf(PLACE_ORDER_MARKER_END) + PLACE_ORDER_MARKER_END.length;
-  if (start === -1 || end < PLACE_ORDER_MARKER_END.length) {
-    console.error('  ✗ Marker not found in checkout.html — cannot patch safely.');
-    process.exit(1);
-  }
-  return src.slice(0, start) + replacement + src.slice(end);
-}
+    function clearCartAndGo(e) {
+      localStorage.removeItem('nordform_cart');
+    }
+
+    renderCheckoutSummary();
+  </script>
+</body>
+</html>`;
+
+const CHECKOUT_BROKEN = `<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kassa – NordformSport</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">Nordform<span>Sport</span></a>
+      <nav class="nav-links">
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+        <a href="about.html">Om oss</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="cart.html" class="cart-icon" id="cart-link">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="cart-count" id="cart-count">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONFIRMATION OVERLAY -->
+  <div class="order-confirmation" id="order-confirmation" style="display:none;">
+    <div class="confirmation-card">
+      <div class="confirmation-icon">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h2>Beställning bekräftad!</h2>
+      <p class="conf-sub">Betalning mottagen. Tack för ditt köp hos NordformSport.</p>
+      <div class="conf-detail">
+        <div><span>Ordernummer</span><strong id="order-number">#NF-000000</strong></div>
+        <div><span>Beräknad leverans</span><strong id="delivery-date">–</strong></div>
+        <div><span>Betalningsmetod</span><strong id="payment-method-display">–</strong></div>
+        <div><span>Totalt betalt</span><strong id="conf-total">–</strong></div>
+      </div>
+      <p class="conf-email">En orderbekräftelse har skickats till <strong id="conf-email-addr">din e-post</strong>.</p>
+      <a href="index.html" class="btn btn-primary" onclick="clearCartAndGo(event)">Fortsätt handla</a>
+    </div>
+  </div>
+
+  <!-- CHECKOUT FORM -->
+  <section class="section" id="checkout-section">
+    <div class="container">
+      <h1 class="page-title">Kassa</h1>
+
+      <div class="checkout-layout">
+
+        <!-- LEFT: Form -->
+        <div class="checkout-form-col">
+
+          <div class="checkout-block">
+            <h3>Kontaktuppgifter</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Förnamn</label>
+                <input type="text" id="fname" placeholder="Erik" />
+              </div>
+              <div class="form-group">
+                <label>Efternamn</label>
+                <input type="text" id="lname" placeholder="Svensson" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>E-postadress</label>
+              <input type="email" id="email" placeholder="erik@exempel.se" />
+            </div>
+            <div class="form-group">
+              <label>Telefon</label>
+              <input type="tel" id="phone" placeholder="070-123 45 67" />
+            </div>
+          </div>
+
+          <div class="checkout-block">
+            <h3>Leveransadress</h3>
+            <div class="form-group">
+              <label>Gatuadress</label>
+              <input type="text" id="address" placeholder="Storgatan 12" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Postnummer</label>
+                <input type="text" id="zip" placeholder="114 36" />
+              </div>
+              <div class="form-group">
+                <label>Stad</label>
+                <input type="text" id="city" placeholder="Stockholm" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Land</label>
+              <select id="country">
+                <option value="SE">Sverige</option>
+                <option value="NO">Norge</option>
+                <option value="DK">Danmark</option>
+                <option value="FI">Finland</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="checkout-block">
+            <h3>Betalningsmetod</h3>
+            <div class="payment-options">
+              <label class="payment-option">
+                <input type="radio" name="payment" value="card" checked />
+                <div class="payment-label">
+                  <span>Betalkort</span>
+                  <div class="card-icons">
+                    <span class="card-badge">VISA</span>
+                    <span class="card-badge">MC</span>
+                  </div>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="swish" />
+                <div class="payment-label">
+                  <span>Swish</span>
+                  <span class="swish-badge">Swish</span>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment" value="klarna" />
+                <div class="payment-label">
+                  <span>Faktura – Klarna</span>
+                  <span class="klarna-badge">K</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="card-fields" id="card-fields">
+              <div class="form-group">
+                <label>Kortnummer</label>
+                <input type="text" placeholder="1234 5678 9012 3456" maxlength="19" id="card-number" oninput="formatCard(this)" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Giltig till</label>
+                  <input type="text" placeholder="MM/ÅÅ" maxlength="5" id="card-expiry" oninput="formatExpiry(this)" />
+                </div>
+                <div class="form-group">
+                  <label>CVC</label>
+                  <input type="text" placeholder="123" maxlength="3" id="card-cvc" />
+                </div>
+              </div>
+            </div>
+
+            <div class="swish-fields" id="swish-fields" style="display:none;">
+              <div class="form-group">
+                <label>Mobilnummer för Swish</label>
+                <input type="tel" placeholder="070-123 45 67" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Order summary -->
+        <div class="checkout-summary-col">
+          <div class="checkout-block summary-block">
+            <h3>Din beställning</h3>
+            <div id="checkout-items"></div>
+            <div class="summary-totals" id="summary-totals"></div>
+            <div id="payment-error" style="display:none; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; border-radius:8px; padding:12px 16px; margin-bottom:14px; font-size:.875rem; font-weight:500;"></div>
+            <button class="btn btn-primary btn-full" onclick="placeOrder()">Genomför köp</button>
+            <p class="secure-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Säker betalning med 256-bit SSL-kryptering
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo">Nordform<span>Sport</span></span>
+        <p>Vi levererar kvalitetsutrustning för svenska sportentusiaster sedan 2010.</p>
+      </div>
+      <div class="footer-links">
+        <h4>Sport</h4>
+        <a href="running.html">Löpning</a>
+        <a href="squash.html">Squash</a>
+        <a href="golf.html">Golf</a>
+      </div>
+      <div class="footer-links">
+        <h4>Kundservice</h4>
+        <a href="#">Frakt &amp; retur</a>
+        <a href="#">Kontakta oss</a>
+        <a href="#">Vanliga frågor</a>
+      </div>
+      <div class="footer-links">
+        <h4>Företag</h4>
+        <a href="about.html">Om oss</a>
+        <a href="#">Press</a>
+        <a href="#">Karriär</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 NordformSport AB. Org.nr 556789-1234. Alla rättigheter förbehållna.</p>
+    </div>
+  </footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script>
+    // __REPOREVERSE_BROKEN__
+    document.querySelectorAll('input[name="payment"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.getElementById('card-fields').style.display = radio.value === 'card' ? 'block' : 'none';
+        document.getElementById('swish-fields').style.display = radio.value === 'swish' ? 'block' : 'none';
+      });
+    });
+
+    function formatCard(el) {
+      el.value = el.value.replace(/\\D/g, '').replace(/(.{4})/g, '$1 ').trim().substring(0, 19);
+    }
+    function formatExpiry(el) {
+      let v = el.value.replace(/\\D/g, '');
+      if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+      el.value = v;
+    }
+
+    function placeOrder() {
+      const el = document.getElementById('payment-error');
+      el.textContent = 'Det gick inte att genomföra köpet. Försök igen senare.';
+      el.style.display = 'block';
+    }
+
+    function clearCartAndGo(e) {
+      localStorage.removeItem('nordform_cart');
+    }
+
+    renderCheckoutSummary();
+  </script>
+</body>
+</html>`;
 
 function ensureBroken() {
-  const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-  writeFileSync(join(__dir, 'checkout.html'), replaceMarkerBlock(src, BROKEN_PLACE_ORDER), 'utf8');
+  writeFileSync(join(__dir, 'checkout.html'), CHECKOUT_BROKEN, 'utf8');
 }
 
 function ensureWorking() {
-  const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-  writeFileSync(join(__dir, 'checkout.html'), replaceMarkerBlock(src, WORKING_PLACE_ORDER), 'utf8');
+  writeFileSync(join(__dir, 'checkout.html'), CHECKOUT_WORKING, 'utf8');
 }
 
 // ── Interactive menu ───────────────────────────────────────
