@@ -161,7 +161,6 @@ function doBreak() {
   }
 
   process.stdout.write(clr(col.bcyan, '\n  → Resetting to broken demo state'));
-  git(`checkout ${BROKEN_SHA} -- checkout.html`);
   ensureBroken();
   git('add checkout.html');
   try { git('commit -m "chore: reset to broken demo state [reporeverse]"'); }
@@ -185,7 +184,6 @@ function doFix() {
   }
 
   process.stdout.write(clr(col.bcyan, '\n  → Restoring working checkout'));
-  git(`checkout ${WORKING_SHA} -- checkout.html`);
   ensureWorking();
   git('add checkout.html');
   try { git('commit -m "fix: restore placeOrder — checkout works again [reporeverse]"'); }
