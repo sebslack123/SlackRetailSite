@@ -242,9 +242,9 @@
       deliveryDate.setDate(deliveryDate.getDate() + 3);
       const deliveryStr = deliveryDate.toLocaleDateString('sv-SE');
 
-      const cart = JSON.parse(localStorage.getItem('nordform_cart') || '[]');
-      let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-      total += 49;
+      const subtotal = getCartTotal();
+      const shipping = subtotal >= 499 ? 0 : 49;
+      const total = subtotal + shipping;
 
       document.getElementById('order-number').textContent = orderNum;
       document.getElementById('delivery-date').textContent = deliveryStr;
