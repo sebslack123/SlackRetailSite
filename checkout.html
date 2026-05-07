@@ -229,32 +229,23 @@
     }
 
     function placeOrder() {
-      const email = document.getElementById('email').value || 'kund@exempel.se';
-      const paymentInput = document.querySelector('input[name="payment"]:checked');
-      const paymentMethod = paymentInput ? paymentInput.value : 'card';
-
-      const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Faktura – Klarna' };
-      const paymentDisplay = paymentLabels[paymentMethod] || 'Betalkort';
-
-      const orderNum = '#NF-' + String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-
-      const deliveryDate = new Date();
-      deliveryDate.setDate(deliveryDate.getDate() + 3);
-      const deliveryStr = deliveryDate.toLocaleDateString('sv-SE');
-
-      const subtotal = getCartTotal();
-      const shipping = subtotal >= 499 ? 0 : 49;
-      const total = subtotal + shipping;
+      const email = document.getElementById('email').value || 'din@email.se';
+      const payment = document.querySelector('input[name="payment"]:checked').value;
+      const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna faktura' };
+      const orderNum = '#NF-' + Math.floor(100000 + Math.random() * 900000);
+      const deliveryDate = new Date(Date.now() + 3 * 86400000).toLocaleDateString('sv-SE', { weekday: 'long', month: 'long', day: 'numeric' });
+      const total = getCartTotal();
 
       document.getElementById('order-number').textContent = orderNum;
-      document.getElementById('delivery-date').textContent = deliveryStr;
-      document.getElementById('payment-method-display').textContent = paymentDisplay;
-      document.getElementById('conf-total').textContent = total.toLocaleString('sv-SE') + ' kr';
+      document.getElementById('delivery-date').textContent = deliveryDate;
+      document.getElementById('payment-method-display').textContent = paymentLabels[payment];
+      document.getElementById('conf-total').textContent = formatPrice(total);
       document.getElementById('conf-email-addr').textContent = email;
 
       document.getElementById('checkout-section').style.display = 'none';
       const conf = document.getElementById('order-confirmation');
       conf.style.display = 'flex';
+      conf.scrollIntoView({ behavior: 'smooth' });
     }
 
     function clearCartAndGo(e) {

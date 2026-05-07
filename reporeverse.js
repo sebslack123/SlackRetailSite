@@ -101,10 +101,13 @@ function isDirty()     { return git('status --porcelain') !== ''; }
 function currentState() {
   try {
     const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
-    if (src.includes("showError('Det gick inte") && !src.includes("const email = document.getElementById('email')")) {
-      return 'broken';
-    }
-    return 'working';
+    // Broken = placeOrder body only shows an error, never shows the modal
+    const hasFlex = src.includes("display = 'flex'") || src.includes('display="flex"') || src.includes("display: 'flex'");
+    const hasError = src.includes('payment-error') && src.includes('style.display') && !hasFlex;
+    if (hasError || src.includes('FIXME: placeOrder')) return 'broken';
+    // Working = placeOrder shows the #order-confirmation modal
+    if (hasFlex && src.includes('order-confirmation')) return 'working';
+    return 'unknown';
   } catch { return 'unknown'; }
 }
 
