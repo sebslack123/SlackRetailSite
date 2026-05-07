@@ -193,7 +193,7 @@
       </div>
       <div class="footer-links">
         <h4>Kundservice</h4>
-        <a href="#">Frakt &amp; retur</a>
+        <a href="#">Frakt & retur</a>
         <a href="#">Kontakta oss</a>
         <a href="#">Vanliga frågor</a>
       </div>
@@ -212,7 +212,7 @@
   <script src="js/products.js"></script>
   <script src="js/cart.js"></script>
   <script>
-    // __REPOREVERSE_BROKEN__
+    // Show/hide payment fields
     document.querySelectorAll('input[name="payment"]').forEach(radio => {
       radio.addEventListener('change', () => {
         document.getElementById('card-fields').style.display = radio.value === 'card' ? 'block' : 'none';
@@ -230,9 +230,14 @@
     }
 
     function placeOrder() {
+      showError('Det gick inte att genomföra köpet. Försök igen senare.');
+    }
+
+    function showError(msg) {
       const el = document.getElementById('payment-error');
-      el.textContent = 'Det gick inte att genomföra köpet. Försök igen senare.';
+      el.textContent = msg;
       el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function clearCartAndGo(e) {
