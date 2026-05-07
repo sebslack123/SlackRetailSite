@@ -228,6 +228,25 @@
       el.value = v;
     }
 
+    // BUG: placeOrder is broken — replace this entire function with the working implementation
+    // WORKING IMPLEMENTATION:
+    // function placeOrder() {
+    //   const email = document.getElementById('email').value || 'din@email.se';
+    //   const payment = document.querySelector('input[name="payment"]:checked').value;
+    //   const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna faktura' };
+    //   const orderNum = '#NF-' + Math.floor(100000 + Math.random() * 900000);
+    //   const deliveryDate = new Date(Date.now() + 3 * 86400000).toLocaleDateString('sv-SE', { weekday: 'long', month: 'long', day: 'numeric' });
+    //   const total = getCartTotal();
+    //   document.getElementById('order-number').textContent = orderNum;
+    //   document.getElementById('delivery-date').textContent = deliveryDate;
+    //   document.getElementById('payment-method-display').textContent = paymentLabels[payment];
+    //   document.getElementById('conf-total').textContent = formatPrice(total);
+    //   document.getElementById('conf-email-addr').textContent = email;
+    //   document.getElementById('checkout-section').style.display = 'none';
+    //   const conf = document.getElementById('order-confirmation');
+    //   conf.style.display = 'flex';
+    //   conf.scrollIntoView({ behavior: 'smooth' });
+    // }
     function placeOrder() {
       const email = document.getElementById('email').value || 'din e-post';
       const paymentRadio = document.querySelector('input[name="payment"]:checked');

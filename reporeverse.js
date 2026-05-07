@@ -202,12 +202,42 @@ function animateDots(n = 3) {
 }
 
 // ── Content patchers ───────────────────────────────────────
+const BROKEN_BLOCK = `    // BUG: placeOrder is broken — replace this entire function with the working implementation
+    // WORKING IMPLEMENTATION:
+    // function placeOrder() {
+    //   const email = document.getElementById('email').value || 'din@email.se';
+    //   const payment = document.querySelector('input[name="payment"]:checked').value;
+    //   const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna faktura' };
+    //   const orderNum = '#NF-' + Math.floor(100000 + Math.random() * 900000);
+    //   const deliveryDate = new Date(Date.now() + 3 * 86400000).toLocaleDateString('sv-SE', { weekday: 'long', month: 'long', day: 'numeric' });
+    //   const total = getCartTotal();
+    //   document.getElementById('order-number').textContent = orderNum;
+    //   document.getElementById('delivery-date').textContent = deliveryDate;
+    //   document.getElementById('payment-method-display').textContent = paymentLabels[payment];
+    //   document.getElementById('conf-total').textContent = formatPrice(total);
+    //   document.getElementById('conf-email-addr').textContent = email;
+    //   document.getElementById('checkout-section').style.display = 'none';
+    //   const conf = document.getElementById('order-confirmation');
+    //   conf.style.display = 'flex';
+    //   conf.scrollIntoView({ behavior: 'smooth' });
+    // }
+    function placeOrder() {
+      showError('Det gick inte att genomföra köpet. Försök igen senare.');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('payment-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }`;
+
 function ensureBroken() {
   const src = readFileSync(join(__dir, 'checkout.html'), 'utf8');
   if (src.includes("showError('Det gick inte")) return;
   const patched = src.replace(
-    /function placeOrder\(\) \{[\s\S]*?(?=\n\s{4}function clearCartAndGo)/,
-    `function placeOrder() {\n      showError('Det gick inte att genomföra köpet. Försök igen senare.');\n    }\n\n    function showError(msg) {\n      const el = document.getElementById('payment-error');\n      el.textContent = msg;\n      el.style.display = 'block';\n      el.scrollIntoView({ behavior: 'smooth', block: 'center' });\n    }\n\n    `
+    /\s*\/\/ BUG:[\s\S]*?function showError[\s\S]*?\n\s*\}|function placeOrder\(\) \{[\s\S]*?(?=\n\s{4}function clearCartAndGo)/,
+    '\n' + BROKEN_BLOCK + '\n\n    '
   );
   writeFileSync(join(__dir, 'checkout.html'), patched, 'utf8');
 }
