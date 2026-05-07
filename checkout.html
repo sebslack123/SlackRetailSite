@@ -193,7 +193,7 @@
       </div>
       <div class="footer-links">
         <h4>Kundservice</h4>
-        <a href="#">Frakt & retur</a>
+        <a href="#">Frakt &amp; retur</a>
         <a href="#">Kontakta oss</a>
         <a href="#">Vanliga frågor</a>
       </div>
@@ -212,7 +212,7 @@
   <script src="js/products.js"></script>
   <script src="js/cart.js"></script>
   <script>
-    // Show/hide payment fields
+    // __REPOREVERSE_BROKEN__
     document.querySelectorAll('input[name="payment"]').forEach(radio => {
       radio.addEventListener('change', () => {
         document.getElementById('card-fields').style.display = radio.value === 'card' ? 'block' : 'none';
@@ -230,22 +230,9 @@
     }
 
     function placeOrder() {
-      const email = document.getElementById('email').value;
-      const payment = document.querySelector('input[name="payment"]:checked').value;
-      const orderNumber = '#NF-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      const deliveryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('sv-SE');
-      const total = formatPrice(getCartTotal());
-
-      const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Faktura – Klarna' };
-
-      document.getElementById('order-number').textContent = orderNumber;
-      document.getElementById('delivery-date').textContent = deliveryDate;
-      document.getElementById('payment-method-display').textContent = paymentLabels[payment] || payment;
-      document.getElementById('conf-total').textContent = total;
-      document.getElementById('conf-email-addr').textContent = email;
-
-      document.getElementById('checkout-section').style.display = 'none';
-      document.getElementById('order-confirmation').style.display = 'flex';
+      const el = document.getElementById('payment-error');
+      el.textContent = 'Det gick inte att genomföra köpet. Försök igen senare.';
+      el.style.display = 'block';
     }
 
     function clearCartAndGo(e) {
