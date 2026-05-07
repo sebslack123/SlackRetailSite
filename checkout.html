@@ -230,92 +230,24 @@
     }
 
     function placeOrder() {
-      // Hide any previous error
-      document.getElementById('payment-error').style.display = 'none';
+      const email = document.getElementById('email').value || 'din@email.se';
+      const payment = document.querySelector('input[name="payment"]:checked').value;
+      const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna Faktura' };
+      const orderNum = '#NF-' + Math.floor(100000 + Math.random() * 900000);
+      const deliveryDate = new Date(Date.now() + 3 * 86400000).toLocaleDateString('sv-SE', { weekday: 'long', month: 'long', day: 'numeric' });
+      const total = getCartTotal();
 
-      // Validate required fields
-      const fname = document.getElementById('fname').value.trim();
-      const lname = document.getElementById('lname').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const address = document.getElementById('address').value.trim();
-      const zip = document.getElementById('zip').value.trim();
-      const city = document.getElementById('city').value.trim();
-
-      if (!fname || !lname) {
-        showError('Vänligen ange ditt för- och efternamn.');
-        return;
-      }
-      if (!email || !email.includes('@')) {
-        showError('Vänligen ange en giltig e-postadress.');
-        return;
-      }
-      if (!phone) {
-        showError('Vänligen ange ditt telefonnummer.');
-        return;
-      }
-      if (!address || !zip || !city) {
-        showError('Vänligen fyll i en fullständig leveransadress.');
-        return;
-      }
-
-      // Get payment method
-      const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
-
-      // Validate card fields if card is selected
-      if (paymentMethod === 'card') {
-        const cardNumber = document.getElementById('card-number').value.replace(/\s/g, '');
-        const cardExpiry = document.getElementById('card-expiry').value;
-        const cardCvc = document.getElementById('card-cvc').value;
-
-        if (cardNumber.length < 13) {
-          showError('Vänligen ange ett giltigt kortnummer.');
-          return;
-        }
-        if (!cardExpiry || cardExpiry.length < 5) {
-          showError('Vänligen ange kortets giltighetsdatum (MM/ÅÅ).');
-          return;
-        }
-        if (!cardCvc || cardCvc.length < 3) {
-          showError('Vänligen ange kortets CVC-kod.');
-          return;
-        }
-      }
-
-      // Check cart is not empty
-      if (getCart().length === 0) {
-        showError('Din varukorg är tom.');
-        return;
-      }
-
-      // Generate order number
-      const orderNum = 'NF-' + Math.floor(100000 + Math.random() * 900000);
-
-      // Calculate delivery date (3-5 business days)
-      const deliveryDate = new Date();
-      deliveryDate.setDate(deliveryDate.getDate() + 4);
-      const formattedDate = deliveryDate.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
-
-      // Get payment method display name
-      const paymentNames = { card: 'Betalkort', swish: 'Swish', klarna: 'Klarna Faktura' };
-
-      // Calculate total
-      const subtotal = getCartTotal();
-      const shipping = subtotal >= 499 ? 0 : 49;
-      const total = subtotal + shipping;
-
-      // Populate confirmation
-      document.getElementById('order-number').textContent = '#' + orderNum;
-      document.getElementById('delivery-date').textContent = formattedDate;
-      document.getElementById('payment-method-display').textContent = paymentNames[paymentMethod];
+      document.getElementById('order-number').textContent = orderNum;
+      document.getElementById('delivery-date').textContent = deliveryDate;
+      document.getElementById('payment-method-display').textContent = paymentLabels[payment];
       document.getElementById('conf-total').textContent = formatPrice(total);
       document.getElementById('conf-email-addr').textContent = email;
 
-      // Hide checkout form, show confirmation
       document.getElementById('checkout-section').style.display = 'none';
-      document.getElementById('order-confirmation').style.display = 'flex';
+      const conf = document.getElementById('order-confirmation');
+      conf.style.display = 'flex';
+      conf.scrollIntoView({ behavior: 'smooth' });
 
-      // Clear cart
       localStorage.removeItem(CART_KEY);
       updateCartUI();
     }
