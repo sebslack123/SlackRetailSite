@@ -230,9 +230,31 @@
     }
 
     function placeOrder() {
-      const el = document.getElementById('payment-error');
-      el.textContent = 'Det gick inte att genomföra köpet. Försök igen senare.';
-      el.style.display = 'block';
+      const email = document.getElementById('email').value;
+      const paymentRadio = document.querySelector('input[name="payment"]:checked');
+      const paymentValue = paymentRadio ? paymentRadio.value : 'card';
+
+      const paymentLabels = { card: 'Betalkort', swish: 'Swish', klarna: 'Faktura – Klarna' };
+      const paymentDisplay = paymentLabels[paymentValue] || paymentValue;
+
+      const orderNumber = '#NF-' + Math.floor(100000 + Math.random() * 900000);
+
+      const deliveryDate = new Date();
+      deliveryDate.setDate(deliveryDate.getDate() + 3);
+      const formattedDate = deliveryDate.toLocaleDateString('sv-SE');
+
+      const subtotal = getCartTotal();
+      const shipping = subtotal >= 499 ? 0 : 49;
+      const total = subtotal + shipping;
+
+      document.getElementById('order-number').textContent = orderNumber;
+      document.getElementById('delivery-date').textContent = formattedDate;
+      document.getElementById('payment-method-display').textContent = paymentDisplay;
+      document.getElementById('conf-total').textContent = formatPrice(total);
+      document.getElementById('conf-email-addr').textContent = email;
+
+      document.getElementById('checkout-section').style.display = 'none';
+      document.getElementById('order-confirmation').style.display = 'flex';
     }
 
     function clearCartAndGo(e) {
